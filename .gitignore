@@ -1,0 +1,23 @@
+.venv/
+*.egg-info/
+
+# Secrets - API keys must never be committed
+.env
+.env.*
+!.env.example
+*.local.json
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Editor
+.vscode/
+
+# Source documents - PDFs are never committed (copyright / size)
+data/documents/
+*.pdf
+
+# Local design notes - not part of the repository
+design decision.doc
