@@ -29,7 +29,9 @@ The initial document collection consists of approximately ten aviation PDFs. The
 ### Currently used
 
 - **Python** — primary implementation language.
-- **Nutrient API** — text extraction from PDFs to Markdown with reading order preserved. This is the current text baseline (see section 5.1).
+- **LlamaParse (LlamaCloud Extract API)** — extraction of each PDF into structured JSON: document title, page label, and sections with start/end page labels and content. This is the current extraction baseline and the foundation for chunking (see section 5.1).
+- **llama-cloud** (Python client) — calls the LlamaParse Extract API.
+- **python-dotenv** — loads API keys from the local, git-ignored `.env` file.
 - **PyMuPDF (fitz)** — page metadata access: page dimensions, image counts, and page identifiers.
 - **Python dataclasses** — explicit data models for extracted document structures.
 - **pytest** — automated testing.
@@ -40,7 +42,7 @@ The initial document collection consists of approximately ten aviation PDFs. The
 - A vision-capable model (provider to be selected) — extraction of knowledge from figures, diagrams, and tables. Deferred to a later phase (see section 5.4).
 - Azure AI Search — vector and hybrid retrieval.
 - FastAPI — HTTP API for the RAG application.
-- Azure AI Document Intelligence — optional layout-aware extraction for difficult PDFs. Lower priority now that the Nutrient API provides the text baseline.
+- Azure AI Document Intelligence — optional layout-aware extraction for difficult PDFs. Lower priority now that LlamaParse provides the structured baseline.
 - A lightweight web interface — optional user-facing question-and-answer application.
 
 Keep the initial implementation explicit and modular. Introduce additional libraries and managed services only when they provide a clear benefit.
@@ -53,16 +55,13 @@ The application follows a staged document-processing and retrieval pipeline:
 Aviation PDFs
      |
      v
-Nutrient API (text extraction, reading order preserved)
+LlamaParse Extract API (structured extraction: sections, page labels, content)
      |
      v
-Markdown file per document
+JSON file per document (data/extracted/<name>.json)
      |
      v
-SectionBuilder
-     |
-     v
-Structured sections and subsections (with page references)
+Sections with page ranges (read from the JSON)
      |
      v
 Chunker
@@ -86,30 +85,32 @@ LLM answer generation
 Answer with source references
 ```
 
-`PdfDocumentLoader` (PyMuPDF) runs alongside the Nutrient extraction to supply page metadata, image counts, and page identifiers.
+`PdfDocumentLoader` (PyMuPDF) runs alongside the LlamaParse extraction to supply page metadata, image counts, and page identifiers.
 
-The ingestion pipeline must remain independent of the embedding provider, search backend, and LLM provider wherever practical. The same applies to the PDF text-extraction provider: the Nutrient API must be wrapped behind a small interface so that it can be replaced.
+The ingestion pipeline must remain independent of the embedding provider, search backend, and LLM provider wherever practical. The same applies to the PDF extraction provider: the LlamaParse Extract API must be wrapped behind a small interface so that it can be replaced.
 
 ## 5. Current Implementation Status
 
-### 5.1 PDF text extraction (new baseline)
+### 5.1 Structured extraction (current baseline)
 
-The geometric approach to reading order (PyMuPDF spans/blocks plus `LayoutAnalyzer`) proved error-prone on the multi-column layouts of `chapter15_Airspace.pdf`. The project therefore changed approach:
+The geometric approach to reading order (PyMuPDF spans/blocks plus `LayoutAnalyzer`) proved error-prone on the multi-column layouts of `chapter15_Airspace.pdf`. The project therefore uses a structured extraction service:
 
-- The **Nutrient API** extracts the text of each PDF and produces a Markdown file in the correct reading order. This Markdown is the new baseline for all downstream text processing.
-- Extracted Markdown is stored under `data/extracted/` (for example `data/extracted/chapter15_Airspace.md`) so that downstream stages can be run and tested without repeated API calls.
-- The extraction stage must be wrapped behind a small interface (planned name: `MarkdownExtractor`) that takes a PDF path and returns Markdown text plus the page-mapping information needed for citations.
+- The **LlamaParse Extract API** (`LlamaParseDocumentExtractor` in `src/ingestion/llamaParse_document_extractor.py`) extracts each PDF into JSON using a schema. Directories come from `config/application.yml` (`ExtractionConfig` in `src/ingestion/config.py`). The schema asks for `document_title`, `page number`, and a `sections` list. Each section has `section_title`, `start_page`, `end_page`, and `content`. Page labels use the `NN-N` form (for example `15-3`).
+- The JSON is stored under `data/extracted/` (for example `data/extracted/chapter15_Airspace.json`) so that downstream stages can be run and tested without repeated API calls.
+- **The JSON is the foundation for chunking.** Sections, their page ranges, and their text come from this file. Chunks inherit `document_id`, `start_page`, `end_page`, and `section_title` from it.
+- The earlier **Nutrient API** Markdown (`data/extracted/chapter15_Airspace.md`) is kept for reference and comparison only. It is no longer an input to any stage.
+- The extraction stage must be wrapped behind a small provider-independent interface. `LlamaParseDocumentExtractor.extract(document_name)` takes a document name from the configured documents directory and writes the JSON to the configured output directory. The client is injected, so tests use a fake client. The extraction stage must not mix in section building, chunking, or LLM calls.
 
 **Known limitations of this baseline:**
 
-- Images, figures, diagrams, and tables are **not** contained in the Markdown output. Their content is therefore absent from the text baseline and must be handled separately (section 5.4).
-- Page traceability must be verified. Chunks must still cite a document and page, so the page boundaries in the Markdown must be recoverable, either from per-page output or from page markers. This must be confirmed against real output before the chunker depends on it.
-- The Markdown reading order must be validated against representative pages (`chapter15_Airspace.pdf`, particularly pages 2, 3, and 4) and covered by regression tests. Do not claim the extraction is correct for all PDFs based on a single document.
-- Some source PDFs contain figure labels or captions embedded in the text layer. Examples in `chapter15_Airspace.pdf`: the figure 15-1 labels on page 2 (block 004 in the loader check output) and the figure 15-4 caption interrupting a sentence on page 4 (block 037). These do not affect the rendered page but break automatic processing at that location.
+- Section boundaries and page labels are produced by the extraction model, not by PDF geometry. They must be validated against the PDF before the chunker relies on them. Validation must check `start_page` and `end_page` on representative pages of `chapter15_Airspace.pdf` (particularly pages 2, 3, and 4) and be covered by regression tests.
+- Do not claim the extraction is correct for all PDFs based on a single document.
+- Page labels are printed page labels (for example `15-3`), not PDF page indexes. Confirm the mapping against the PDF before using them as citation targets.
+- `content` still contains figure references (for example `[Figure 15-2]`) and figure captions (for example `Figure 15-2. An example of a prohibited area`). A cleanup step is needed before chunking: remove figure references and captions, and repair text they interrupt. The cleanup must be validated against the sample document and covered by regression tests. Whether it is AI-based or rule-based is a decision for later.
+- `content` contains U+FFFD replacement characters (`�`) where quotation marks were lost. These must be repaired or documented before retrieval.
+- The JSON file does not store the per-field citation and confidence metadata that the extraction script prints. Decide whether to store it.
 
-**Planned cleanup step (before SectionBuilder):** an AI-based cleanup stage will remove such embedded figure labels and captions from the extracted Markdown, and repair text interrupted by them. It operates on the Markdown output, not on the PDF, and its results must be validated against the sample document and covered by regression tests.
-
-`PdfDocumentLoader` uses PyMuPDF's `page.get_text("dict")` to preserve text spans, lines, blocks, font properties, and bounding-box coordinates. It is retained for page metadata (page dimensions, image counts, identifiers). Its geometry and font data are not inputs to `SectionBuilder` (see section 5.3). It is no longer the source of the text baseline.
+`PdfDocumentLoader` uses PyMuPDF's `page.get_text("dict")` to preserve text spans, lines, blocks, font properties, and bounding-box coordinates. It is retained for page metadata (page dimensions, image counts, identifiers). Its geometry and font data are not inputs to sections or chunks. It is no longer the source of the text baseline.
 
 The current data model includes:
 
@@ -119,13 +120,15 @@ The current data model includes:
 - `DocumentPage`
 - `Section` (initial model)
 
+The JSON-based section model is not yet defined in code. Any earlier section model (for example `MarkdownSection`) was written for the Markdown-based design and must be reviewed against the JSON fields before it is used.
+
 ### 5.2 Layout analysis (superseded)
 
-`LayoutAnalyzer` estimated reading order from the geometry of PyMuPDF text blocks. Because the Nutrient API now provides reading order, `LayoutAnalyzer` is superseded and must not be extended.
+`LayoutAnalyzer` estimated reading order from the geometry of PyMuPDF text blocks. Because the LlamaParse extraction now provides structured sections in reading order, `LayoutAnalyzer` is superseded and must not be extended.
 
-Its existing code and tests are kept until the Markdown baseline is validated. Once the replacement is in place, the team decides whether to remove it. Any layout cases it previously solved should be checked against the Markdown output and carried into regression tests.
+Its existing code and tests are kept until the extraction baseline is validated. Once the replacement is in place, the team decides whether to remove it. Any layout cases it previously solved should be checked against the extracted output and carried into regression tests.
 
-The geometric approach revealed the following challenges, which the Markdown baseline must be validated against:
+The geometric approach revealed the following challenges, which the extraction baseline must be validated against:
 
 - Two-column layouts on several pages.
 - Full-width content alongside column-based content.
@@ -134,17 +137,14 @@ The geometric approach revealed the following challenges, which the Markdown bas
 - Tables whose cell relationships are not preserved by simple text extraction.
 - Extraction order that differs from visual reading order.
 
-### 5.3 Section building
+### 5.3 Sections
 
-`SectionBuilder` has not yet been implemented.
+Sections come from the LlamaParse JSON (section 5.1). The earlier design, in which a `SectionBuilder` derived sections from Markdown heading markers, is superseded by this change.
 
-Its sole responsibility is to build sections from the Markdown produced by the extraction stage. It relies only on the Markdown heading markers (`#`, `##`, `###`, …) to determine each section's title, hierarchy level, and boundaries, and assigns the content that follows each heading to that section.
-
-- `SectionBuilder` does not use font size, boldness, whitespace, indentation, position on the page, or any other PDF geometry to confirm, reject, or re-level a heading.
-- `SectionBuilder` does not use text-pattern heuristics (for example, numbered-heading regexes or heading-like wording) to detect headings.
-- Page references for each section, including sections that continue across pages, come from the page mapping established in section 5.1, not from geometry analysis.
-- The existing `HeadingClassifier` (font- and bold-based) is not part of this design and must not feed `SectionBuilder`.
-- If Markdown heading markers prove missing, inconsistent, or wrong, the problem is handled by inspecting and validating the extraction output, not by adding heuristics to `SectionBuilder`.
+- Each JSON section provides `section_title`, `start_page`, `end_page`, and `content`. These are the section's title, page range, and text.
+- The JSON has no heading level. The current extraction schema does not expose subsections, so the section hierarchy is flat. Adding a hierarchy requires a schema change and validation against the sample document.
+- The JSON section list is the input to the Chunker. Whether a separate stage is still needed to validate and normalise these sections (the role `SectionBuilder` was meant to play) is an open decision.
+- Whatever that stage does, it must not use PDF geometry, font data, or `HeadingClassifier` output. Section boundaries must not be re-derived with text-pattern heuristics on the content. Errors in section boundaries or page labels are handled by changing the extraction schema or prompt and re-validating against the PDF.
 
 ### 5.4 Images, figures, and tables (deferred)
 
@@ -152,7 +152,7 @@ Images, figures, diagrams, and tables are out of scope for the current phase. Th
 
 In a later phase, a vision-capable model will read these elements, extract the relevant knowledge, and store it as additional retrievable content linked to the source document and page. Until then:
 
-- Do not treat the Markdown as a complete representation of a page that contains figures or tables.
+- Do not treat the extracted text (JSON `content`) as a complete representation of a page that contains figures or tables.
 - Keep image counts and page identifiers from `PdfDocumentLoader` so that pages with non-text content can be identified and flagged.
 - Answers that depend on figure or table content must acknowledge that this content is not yet indexed.
 
@@ -168,16 +168,16 @@ Do not assume these components already exist. Implement and validate each stage 
 
 Each component must have one clear responsibility:
 
-- `MarkdownExtractor`: convert a PDF into reading-ordered Markdown via the Nutrient API, behind a provider-independent interface.
+- Extraction stage: convert a PDF into structured JSON (sections, page labels, content) via the LlamaParse Extract API, behind a provider-independent interface.
 - `PdfDocumentLoader`: extract physical page metadata and geometry (PyMuPDF).
-- `SectionBuilder`: build the logical section hierarchy from the Markdown heading markers. Its sole responsibility is section building; it uses no PDF geometry or font data.
-- `Chunker`: produce retrieval-ready passages.
+- Section handling: read and validate the sections in the extracted JSON. It uses no PDF geometry or font data (see section 5.3).
+- `Chunker`: produce retrieval-ready passages from the JSON sections.
 - `EmbeddingService`: convert text into vectors.
 - `SearchService`: retrieve relevant passages.
 - `AnswerService`: generate grounded answers using retrieved evidence.
 - `LayoutAnalyzer`: superseded; do not extend (see section 5.2).
 
-Do not mix section building, embedding generation, or LLM calls into the PDF loader or the extraction stage.
+Do not mix section handling, embedding generation, or LLM calls into the PDF loader or the extraction stage.
 
 ### Preserve source information
 
@@ -189,11 +189,11 @@ Every generated chunk should be traceable to its source document and page. Prese
 
 Prefer small Python classes with clear interfaces and type hints. Avoid unnecessary abstractions, premature optimization, and large orchestration frameworks.
 
-Use unit tests for isolated algorithms (for example heading detection and chunking on Markdown fixtures) and integration tests for the actual PDF-processing pipeline. Tests that call the Nutrient API must not run on every test run; use cached Markdown in `data/extracted/` or recorded fixtures instead.
+Use unit tests for isolated algorithms (for example section validation and chunking on JSON fixtures) and integration tests for the actual PDF-processing pipeline. Tests that call the LlamaParse API must not run on every test run; use the cached JSON in `data/extracted/` or recorded fixtures instead.
 
 ### Secrets and configuration
 
-Nutrient API credentials and Azure keys are read from environment variables or local, uncommitted configuration. They must never be written into source files, tests, or committed data.
+LlamaParse credentials (`LLAMA-PARSE_API_KEY`), Nutrient API credentials (legacy), and Azure keys are read from environment variables or local, uncommitted configuration (`.env`, git-ignored). They must never be written into source files, tests, or committed data.
 
 ### Evidence-based iteration
 
@@ -211,9 +211,9 @@ Aviation information can be safety-critical. The assistant must not present unsu
 
 Work through the following milestones in order:
 
-1. **Establish the Markdown text baseline:** wrap the Nutrient API extraction behind `MarkdownExtractor`, store the output under `data/extracted/`, and validate reading order on `chapter15_Airspace.pdf` (pages 2, 3, and 4). Confirm that page boundaries can be recovered for citations. Add regression tests.
-2. **Implement SectionBuilder:** build sections, subsections, and section boundaries from the Markdown heading markers only, with page references.
-3. **Implement Chunker:** create coherent chunks with document, page, and section metadata.
+1. **Establish the structured extraction baseline:** wrap the LlamaParse Extract API behind a provider-independent interface, store the JSON under `data/extracted/`, and validate section boundaries and page labels on `chapter15_Airspace.pdf` (pages 2, 3, and 4). Add regression tests.
+2. **Validate and load JSON sections:** load the extracted JSON into section records with document ID, page range, title, and content. Clean up figure references and captions and repair U+FFFD characters, then validate against the sample document. Decide whether a separate section-normalisation stage is still needed.
+3. **Implement Chunker:** create coherent chunks with document, page, and section metadata from the JSON sections.
 4. **Build ingestion tests:** validate extraction, section hierarchy, and chunk quality across representative PDFs.
 5. **Integrate embeddings:** generate embeddings for the processed chunks.
 6. **Implement retrieval:** start with vector search and evaluate hybrid search.
@@ -233,19 +233,19 @@ When modifying AeroRAG:
 - Explain significant algorithmic decisions and their limitations.
 - Prefer changes that can be validated through tests and diagnostic output.
 - Keep the project suitable for a developer learning RAG internals.
-- Do not extend `LayoutAnalyzer`; build on the Markdown baseline instead.
+- Do not extend `LayoutAnalyzer`; build on the extracted JSON baseline instead.
 - Do not skip ahead to embeddings, LLM integration, or image interpretation while the current ingestion milestone remains unresolved.
-- Do not call the Nutrient API from tests or routine runs when cached Markdown is available.
+- Do not call the LlamaParse API from tests or routine runs when the cached JSON is available.
 - When changing data models, update all dependent code and tests.
-- Treat the actual PDF contents and observed diagnostics (including the Markdown output) as the source of truth for extraction- and layout-specific decisions.
+- Treat the actual PDF contents and observed diagnostics (including the extracted JSON) as the source of truth for extraction- and layout-specific decisions.
 
 ## 9. Immediate Next Task
 
-Wrap the Nutrient API extraction behind a `MarkdownExtractor` interface and validate the resulting Markdown for `chapter15_Airspace.pdf`, particularly pages 2, 3, and 4. Confirm that page numbers can be recovered for each section and chunk.
+Validate the LlamaParse JSON in `data/extracted/chapter15_Airspace.json` against `chapter15_Airspace.pdf`, particularly pages 2, 3, and 4. Check that each section's `start_page` and `end_page` are correct and that section text follows the PDF's reading order. Add regression tests for the checks.
 
-Once the reading order and page traceability are validated and regression tests pass, implement `SectionBuilder` as the next component, operating on the Markdown baseline.
+Then define the section model for the JSON fields, remove or repair figure references, captions, and U+FFFD characters in `content`, and implement the Chunker on top of the validated sections.
 
-The immediate objective is a reliable, inspectable ingestion pipeline that transforms raw aviation PDFs into reading-ordered Markdown, then into structured, traceable document sections and retrieval-ready chunks. Images, figures, and tables are handled in a later phase.
+The immediate objective is a reliable, inspectable ingestion pipeline that transforms raw aviation PDFs into structured, traceable document sections and retrieval-ready chunks. Images, figures, and tables are handled in a later phase.
 
 
 ## Testing Standards

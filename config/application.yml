@@ -1,0 +1,9 @@
+# AeroRAG application config.
+# Relative paths are resolved from the project root.
+# Secrets (API keys) do not belong here; they are read from the .env file.
+
+extraction:
+  # Directory that holds the source PDFs.
+  documents_dir: data/documents
+  # Directory that receives the extracted JSON files.
+  output_dir: data/extracted
