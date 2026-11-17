@@ -23,6 +23,7 @@ SAMPLE_RESULT = {
 }
 
 
+# mocks the real client.files: records which PDFs the extractor uploads, without uploading anything.
 class FakeFiles:
     def __init__(self) -> None:
         self.created: list[Path] = []
@@ -32,6 +33,7 @@ class FakeFiles:
         return SimpleNamespace(id="file-1")
 
 
+# mocks the real client.extract: records the requested schema and returns a job with a chosen status and result.
 class FakeExtract:
     def __init__(self, status: str = "COMPLETED", result: dict | None = None) -> None:
         self.status = status
@@ -52,6 +54,7 @@ class FakeExtract:
         )
 
 
+# mocks the real LlamaCloud client, so the extractor can run in tests without network access or API credits.
 class FakeClient:
     def __init__(self, status: str = "COMPLETED", result: dict | None = SAMPLE_RESULT) -> None:
         self.files = FakeFiles()
