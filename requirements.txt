@@ -1,0 +1,15 @@
+# Runtime dependencies for AeroRAG.
+# Install with: pip install -r requirements.txt
+# Lower bounds are the versions the current extraction script was run against.
+
+# LlamaParse / LlamaCloud Extract API client (PDF -> structured JSON)
+llama-cloud>=2.19.0
+
+# Page metadata from PDFs (PdfDocumentLoader)
+pymupdf>=1.28
+
+# Loads LLAMA-PARSE_API_KEY from the local, git-ignored .env file
+python-dotenv>=1.0
+
+# Reads config/application.yml
+pyyaml>=6.0

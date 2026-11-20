@@ -1,0 +1,66 @@
+{
+  "document_title": "",
+  "page number": "15-3",
+  "sections": [
+    {
+      "section_title": "",
+      "start_page": "15-3",
+      "end_page": "15-3",
+      "content": "This provides sufficient airspace for the safe control and separation of aircraft during IFR operations. Chapter 3 of the Aeronautical Information Manual (AIM) explains the various types of Class E airspace.\n\nSectional and other charts depict all locations of Class E airspace with bases below 14,500 feet MSL. In areas where charts do not depict a class E base, class E begins at 14,500 feet MSL.\n\nIn most areas, the Class E airspace base is 1,200 feet AGL. In many other areas, the Class E airspace base is either the surface or 700 feet AGL. Some Class E airspace begins at an MSL altitude depicted on the charts, instead of an AGL altitude.\n\nClass E airspace typically extends up to, but not including, 18,000 feet MSL (the lower limit of Class A airspace). All airspace above FL 600 is Class E airspace."
+    },
+    {
+      "section_title": "Uncontrolled Airspace",
+      "start_page": "15-3",
+      "end_page": "15-3",
+      "content": "Class G Airspace\nUncontrolled airspace or Class G airspace is the portion of the airspace that has not been designated as Class A, B, C, D, or E. It is therefore designated uncontrolled airspace. Class G airspace extends from the surface to the base of the overlying Class E airspace. Although ATC has no authority or responsibility to control air traffic, pilots should remember there are visual flight rules (VFR) minimums that apply to Class G airspace."
+    },
+    {
+      "section_title": "Special Use Airspace",
+      "start_page": "15-3",
+      "end_page": "15-3",
+      "content": "Special use airspace or special area of operation (SAO) is the designation for airspace in which certain activities must be confined, or where limitations may be imposed on aircraft operations that are not part of those activities. Certain special use airspace areas can create limitations on the mixed use of airspace. The special use airspace depicted on instrument charts includes the area name or number, effective altitude, time and weather conditions of operation, the controlling agency, and the chart panel location. On National Aeronautical Charting Group (NACG) en route charts, this information is available on one of the end panels. Special use airspace usually consists of:\n* Prohibited areas\n* Restricted areas\n* Warning areas\n* Military operation areas (MOAs)\n* Alert areas\n* Controlled firing areas (CFAs)"
+    },
+    {
+      "section_title": "Prohibited Areas",
+      "start_page": "15-3",
+      "end_page": "15-3",
+      "content": "Prohibited areas contain airspace of defined dimensions within which the flight of aircraft is prohibited. Such areas are established for security or other reasons associated with the national welfare. These areas are published in the Federal Register and are depicted on aeronautical charts. The area is charted as a \u201cP\u201d followed by a number (e.g., P-40). Examples of prohibited areas include Camp David and the National Mall in Washington, D.C., where the White House and the Congressional buildings are located. [Figure 15-2]\n\nFigure 15-2. An example of a prohibited area, P-40 around Camp David."
+    },
+    {
+      "section_title": "Restricted Areas",
+      "start_page": "15-3",
+      "end_page": "15-4",
+      "content": "Restricted areas are areas where operations are hazardous to nonparticipating aircraft and contain airspace within which the flight of aircraft, while not wholly prohibited, is subject to restrictions. Activities within these areas must be confined because of their nature, or limitations may be imposed upon aircraft operations that are not a part of those activities, or both. Restricted areas denote the existence of unusual, often invisible, hazards to aircraft (e.g., artillery firing, aerial gunnery, or guided missiles). IFR flights may be authorized to transit the airspace and are routed accordingly. Penetration of restricted areas without authorization from the using or controlling agency may be extremely hazardous to the aircraft and its occupants. ATC facilities apply the following procedures when aircraft are operating on an IFR clearance (including those cleared by ATC to maintain VFR on top) via a route that lies within joint-use restricted airspace:\n\n1. If the restricted area is not active and has been released to the Federal Aviation Administration (FAA), the ATC facility allows the aircraft to operate in the restricted airspace without issuing specific clearance for it to do so.\n\n2. If the restricted area is active and has not been released to the FAA, the ATC facility issues a clearance that ensures the aircraft avoids the restricted airspace.\n\nFigure 15-3. Restricted areas on a sectional chart.\n\nRestricted areas are charted with an \u201cR\u201d followed by a number (e.g., R-4401) and are depicted on the en route chart appropriate for use at the altitude or FL being flown. [Figure 15-3] Restricted area information can be obtained on the back of the chart."
+    },
+    {
+      "section_title": "Warning Areas",
+      "start_page": "15-4",
+      "end_page": "15-4",
+      "content": "Warning areas are similar in nature to restricted areas; however, the United States government does not have sole jurisdiction over the airspace. A warning area is airspace of defined dimensions, extending from 3 NM outward from the coast of the United States, containing activity that may be hazardous to nonparticipating aircraft. The purpose of such areas is to warn nonparticipating pilots of the potential danger. A warning area may be located over domestic or international waters or both. The airspace is designated with a \u201cW\u201d followed by a number (e.g., W-237). [Figure 15-4]\n\nFigure 15-4. Requirements for airspace operations."
+    },
+    {
+      "section_title": "Military Operation Areas (MOAs)",
+      "start_page": "15-4",
+      "end_page": "15-4",
+      "content": "MOAs consist of airspace with defined vertical and lateral limits established for the purpose of separating certain military training activities from IFR traffic. Whenever an MOA is being used, nonparticipating IFR traffic may be cleared through an MOA if IFR separation can be provided by ATC. Otherwise, ATC reroutes or restricts nonparticipating IFR traffic. MOAs are depicted on sectional, VFR terminal area, and en route low altitude charts and are not numbered (e.g., \u201cCamden Ridge MOA\u201d). [Figure 15-5] However, the MOA is also further defined on the back of the sectional charts with times of operation, altitudes affected, and the controlling agency."
+    },
+    {
+      "section_title": "Alert Areas",
+      "start_page": "15-4",
+      "end_page": "15-4",
+      "content": "Alert areas are depicted on aeronautical charts with an \u201cA\u201d followed by a number (e.g., A-211) to inform nonparticipating pilots of areas that may contain a high volume of pilot training or an unusual type of aerial activity. Pilots should exercise caution in alert areas. All activity within an alert area shall be conducted in accordance with regulations, without waiver, and pilots of participating aircraft, as well as pilots transiting the area, shall be equally responsible for collision avoidance. [Figure 15-6]"
+    },
+    {
+      "section_title": "Controlled Firing Areas (CFAs)",
+      "start_page": "15-4",
+      "end_page": "15-4",
+      "content": "CFAs contain activities that, if not conducted in a controlled environment, could be hazardous to nonparticipating aircraft. The difference between CFAs and other special use airspace is that activities must be suspended when a spotter aircraft, radar, or ground lookout position indicates an aircraft might be approaching the area. There is no need to chart CFAs since they do not cause a nonparticipating aircraft to change its flight path."
+    },
+    {
+      "section_title": "Other Airspace Areas",
+      "start_page": "15-4",
+      "end_page": "15-4",
+      "content": "\u201cOther airspace areas\u201d is a general term referring to the majority of the remaining airspace. It includes:\n* Local airport advisory (LAA)\n* Military training route (MTR)\n* Temporary flight restriction (TFR)\n* Parachute jump aircraft operations\n* Published VFR routes\n* Terminal radar service area (TRSA)\n* National security area (NSA)\n* Air Defense Identification Zones (ADIZ) land and water based and need for Defense VFR (DVFR) flight plan to operate VFR in this airspace\n* Intercept Procedures and use of 121.5 for communication if not on ATC already"
+    }
+  ]
+}
